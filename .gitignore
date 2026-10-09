@@ -3,3 +3,12 @@ node_modules/
 dist/
 .env
 .env.local
+
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+frontend/git-backup/
+
+frontend/git-backup/
