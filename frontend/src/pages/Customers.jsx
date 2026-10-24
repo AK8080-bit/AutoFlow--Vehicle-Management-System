@@ -1,5 +1,21 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
+import {
+  Users,
+  UserPlus,
+  Pencil,
+  Trash2,
+  Phone,
+  Mail,
+  MapPin,
+  X,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  CarFront
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import NotificationToast from "../components/NotificationToast";
 
 function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -12,99 +28,77 @@ function Customers() {
   });
 
   const [editId, setEditId] = useState(null);
-
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Get all customers from MongoDB
   const fetchCustomers = async () => {
     try {
       const response = await API.get("/customers");
-      setCustomers(response.data);
+      setCustomers(response.data || []);
     } catch (error) {
-      console.error(
-        "Error fetching customers:",
-        error
-      );
+      console.error("Error fetching customers:", error);
     }
   };
 
-  // Load customers when page opens
   useEffect(() => {
     fetchCustomers();
   }, []);
 
-  // Handle input
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
 
-    // Remove error when user starts correcting
     setErrors({
       ...errors,
       [e.target.name]: "",
     });
   };
 
-  // Validate customer form
   const validateForm = () => {
     const newErrors = {};
-
     const name = formData.name.trim();
     const phone = formData.phone.trim();
     const email = formData.email.trim();
     const address = formData.address.trim();
 
-    // Name validation
     if (!name) {
-      newErrors.name = "Name is required";
+      newErrors.name = "Customer name is required";
     } else if (name.length < 2) {
-      newErrors.name =
-        "Name must contain at least 2 characters";
+      newErrors.name = "Name must contain at least 2 characters";
     }
 
-    // Phone validation
     if (!phone) {
       newErrors.phone = "Phone number is required";
     } else if (!/^[0-9]{10}$/.test(phone)) {
-      newErrors.phone =
-        "Phone number must contain exactly 10 digits";
+      newErrors.phone = "Phone number must contain exactly 10 digits";
     }
 
-    // Email validation
     if (!email) {
-      newErrors.email = "Email is required";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
-      newErrors.email =
-        "Please enter a valid email address";
+      newErrors.email = "Email address is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
     }
 
-    // Address validation
     if (!address) {
       newErrors.address = "Address is required";
     } else if (address.length < 3) {
-      newErrors.address =
-        "Address must contain at least 3 characters";
+      newErrors.address = "Address must contain at least 3 characters";
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
-  // Add / Update Customer
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Stop if validation fails
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
+      setLoading(true);
       const cleanedData = {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
@@ -113,50 +107,42 @@ function Customers() {
       };
 
       if (editId) {
-        // Update customer
-        await API.put(
-          `/customers/${editId}`,
-          cleanedData
-        );
-
-        alert("Customer updated successfully!");
+        await API.put(`/customers/${editId}`, cleanedData);
+        setNotification({
+          type: "success",
+          title: "Profile Updated",
+          message: `Customer profile for ${cleanedData.name} updated successfully.`,
+        });
       } else {
-        // Add customer
-        await API.post(
-          "/customers",
-          cleanedData
-        );
-
-        alert("Customer added successfully!");
+        await API.post("/customers", cleanedData);
+        setNotification({
+          type: "success",
+          title: "Customer Registered",
+          message: `${cleanedData.name} (${cleanedData.phone}) enrolled successfully.`,
+        });
       }
 
-      // Refresh customer list
-      fetchCustomers();
-
-      // Clear form
       setFormData({
         name: "",
         phone: "",
         email: "",
         address: "",
       });
-
       setErrors({});
       setEditId(null);
+      fetchCustomers();
     } catch (error) {
-      console.error(
-        "Error saving customer:",
-        error
-      );
-
-      alert(
-        error.response?.data?.message ||
-          "Something went wrong!"
-      );
+      console.error("Error saving customer:", error);
+      setNotification({
+        type: "error",
+        title: "Registration Failed",
+        message: error.response?.data?.message || "Something went wrong saving client.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Edit customer
   const handleEdit = (customer) => {
     setFormData({
       name: customer.name,
@@ -164,47 +150,36 @@ function Customers() {
       email: customer.email,
       address: customer.address,
     });
-
     setErrors({});
     setEditId(customer._id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Delete customer
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this customer?"
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
+    const confirmDelete = window.confirm("Are you sure you want to delete this customer?");
+    if (!confirmDelete) return;
 
     try {
       await API.delete(`/customers/${id}`);
-
-      alert("Customer deleted successfully!");
-
-      // Refresh list
+      setNotification({
+        type: "info",
+        title: "Customer Deleted",
+        message: "Customer profile and fleet association removed.",
+      });
       fetchCustomers();
     } catch (error) {
-      console.error(
-        "Error deleting customer:",
-        error
-      );
-
-      alert(
-        error.response?.data?.message ||
-          "Something went wrong!"
-      );
+      console.error("Error deleting customer:", error);
+      setNotification({
+        type: "error",
+        title: "Delete Failed",
+        message: error.response?.data?.message || "Could not delete customer.",
+      });
     }
   };
 
-  // Cancel edit
   const handleCancel = () => {
     setEditId(null);
-
     setErrors({});
-
     setFormData({
       name: "",
       phone: "",
@@ -215,161 +190,265 @@ function Customers() {
 
   return (
     <main className="dashboard">
-      <h1>Customer Management</h1>
+      <NotificationToast notification={notification} onClose={() => setNotification(null)} />
 
-      {/* Customer Form */}
+      <div className="dashboard-header">
+        <div>
+          <div className="dashboard-pretitle">
+            <Users size={14} className="pulse-icon" /> Client Relationship
+          </div>
+          <h1 className="page-heading">Customer Management</h1>
+          <p className="page-subheading">
+            Register new vehicle owners, manage contact details, and maintain profile records
+          </p>
+        </div>
+        <div className="dashboard-header-right">
+          <span className="record-count-badge">
+            <Users size={14} />
+            {customers.length} Registered {customers.length === 1 ? "Client" : "Clients"}
+          </span>
+        </div>
+      </div>
 
-      <div className="customer-form">
-        <h2>
-          {editId
-            ? "✏️ Edit Customer"
-            : "➕ Add Customer"}
-        </h2>
-
-        <form onSubmit={handleSubmit}>
-          {/* Name */}
-
-          <input
-            type="text"
-            name="name"
-            placeholder="Customer Name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-
-          {errors.name && (
-            <p className="form-error">
-              {errors.name}
+      {/* Customer Form Card */}
+      <div className="customer-form form-panel">
+        <div className="form-panel-header">
+          <div className="form-panel-icon">
+            {editId ? <Pencil size={20} /> : <UserPlus size={20} />}
+          </div>
+          <div>
+            <h2>{editId ? "Update Customer Profile" : "Register New Customer"}</h2>
+            <p className="form-panel-subtext">
+              {editId ? "Modify customer information and contact records" : "Fill in all mandatory client details below"}
             </p>
-          )}
+          </div>
+        </div>
 
-          {/* Phone */}
+        <form onSubmit={handleSubmit} className="modern-form-grid">
+          {/* Name Field */}
+          <div className="input-group-modern">
+            <label className="input-label">
+              <User size={14} /> Full Name <span className="req">*</span>
+            </label>
+            <div className="input-box-wrapper">
+              <input
+                type="text"
+                name="name"
+                placeholder="e.g. Rahul Sharma"
+                value={formData.name}
+                onChange={handleChange}
+                className={errors.name ? "has-error" : ""}
+              />
+            </div>
+            {errors.name && (
+              <p className="form-error">
+                <AlertCircle size={13} /> {errors.name}
+              </p>
+            )}
+          </div>
 
-          <input
-            type="text"
-            name="phone"
-            placeholder="Phone Number"
-            value={formData.phone}
-            onChange={handleChange}
-            maxLength="10"
-          />
+          {/* Phone Field */}
+          <div className="input-group-modern">
+            <label className="input-label">
+              <Phone size={14} /> Phone Number <span className="req">*</span>
+            </label>
+            <div className="input-box-wrapper">
+              <input
+                type="text"
+                name="phone"
+                placeholder="10-digit mobile number"
+                value={formData.phone}
+                onChange={handleChange}
+                maxLength="10"
+                className={errors.phone ? "has-error" : ""}
+              />
+            </div>
+            {errors.phone && (
+              <p className="form-error">
+                <AlertCircle size={13} /> {errors.phone}
+              </p>
+            )}
+          </div>
 
-          {errors.phone && (
-            <p className="form-error">
-              {errors.phone}
-            </p>
-          )}
+          {/* Email Field */}
+          <div className="input-group-modern">
+            <label className="input-label">
+              <Mail size={14} /> Email Address <span className="req">*</span>
+            </label>
+            <div className="input-box-wrapper">
+              <input
+                type="email"
+                name="email"
+                placeholder="e.g. rahul@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                className={errors.email ? "has-error" : ""}
+              />
+            </div>
+            {errors.email && (
+              <p className="form-error">
+                <AlertCircle size={13} /> {errors.email}
+              </p>
+            )}
+          </div>
 
-          {/* Email */}
+          {/* Address Field */}
+          <div className="input-group-modern">
+            <label className="input-label">
+              <MapPin size={14} /> Service / Home Address <span className="req">*</span>
+            </label>
+            <div className="input-box-wrapper">
+              <input
+                type="text"
+                name="address"
+                placeholder="Street address, city"
+                value={formData.address}
+                onChange={handleChange}
+                className={errors.address ? "has-error" : ""}
+              />
+            </div>
+            {errors.address && (
+              <p className="form-error">
+                <AlertCircle size={13} /> {errors.address}
+              </p>
+            )}
+          </div>
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-
-          {errors.email && (
-            <p className="form-error">
-              {errors.email}
-            </p>
-          )}
-
-          {/* Address */}
-
-          <input
-            type="text"
-            name="address"
-            placeholder="Address"
-            value={formData.address}
-            onChange={handleChange}
-          />
-
-          {errors.address && (
-            <p className="form-error">
-              {errors.address}
-            </p>
-          )}
-
-          <button type="submit">
-            {editId
-              ? "Update Customer"
-              : "Add Customer"}
-          </button>
-
-          {editId && (
-            <button
-              type="button"
-              className="cancel-btn"
-              onClick={handleCancel}
-            >
-              Cancel
+          {/* Action Buttons */}
+          <div className="form-action-row">
+            <button type="submit" className="primary-action-btn" disabled={loading}>
+              {editId ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
+              <span>{editId ? "Save Changes" : "Register Customer"}</span>
             </button>
-          )}
+
+            {editId && (
+              <button
+                type="button"
+                className="secondary-cancel-btn"
+                onClick={handleCancel}
+              >
+                <X size={16} />
+                <span>Cancel</span>
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
-      {/* Customer List */}
-
+      {/* Customer List Card */}
       <div className="customer-list">
-        <h2>👥 Customer List</h2>
+        <div className="section-header">
+          <div className="section-title-wrap">
+            <div className="section-icon-badge">
+              <Users size={18} />
+            </div>
+            <div>
+              <h2>Client Directory</h2>
+              <p className="section-subtext">Manage accounts, view contacts, and trigger updates</p>
+            </div>
+          </div>
+          <span className="record-count-badge">
+            {customers.length} Records
+          </span>
+        </div>
 
         {customers.length === 0 ? (
-          <p>No customers added yet.</p>
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Users size={38} />
+            </div>
+            <h3>No Customers Found</h3>
+            <p>Add your first client profile above to start managing vehicle service histories.</p>
+          </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Address</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {customers.map(
-                (customer, index) => (
-                  <tr key={customer._id}>
-                    <td>{index + 1}</td>
-
-                    <td>{customer.name}</td>
-
-                    <td>{customer.phone}</td>
-
-                    <td>{customer.email}</td>
-
-                    <td>{customer.address}</td>
-
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Customer Name</th>
+                  <th>Contact Phone</th>
+                  <th>Email Address</th>
+                  <th>Linked Vehicles</th>
+                  <th>Service Address</th>
+                  <th className="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customers.map((customer, index) => (
+                  <tr key={customer._id || index}>
+                    <td className="index-cell">{index + 1}</td>
                     <td>
-                      <button
-                        className="edit-btn"
-                        onClick={() =>
-                          handleEdit(customer)
-                        }
+                      <div className="customer-name-cell">
+                        <div className="user-avatar-initials">
+                          {customer.name?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <span className="table-cell-highlight">{customer.name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <a href={`tel:${customer.phone}`} className="phone-link">
+                        <Phone size={13} className="table-inline-icon" />
+                        {customer.phone}
+                      </a>
+                    </td>
+                    <td>
+                      <a href={`mailto:${customer.email}`} className="email-link">
+                        <Mail size={13} className="table-inline-icon" />
+                        {customer.email}
+                      </a>
+                    </td>
+                    <td>
+                      <Link
+                        to="/vehicles"
+                        className="plate-badge"
+                        style={{
+                          fontSize: "12px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          textDecoration: "none",
+                        }}
+                        title="Click to view fleet vehicles"
                       >
-                        ✏️ Edit
-                      </button>
-
-                      <button
-                        className="delete-btn"
-                        onClick={() =>
-                          handleDelete(
-                            customer._id
-                          )
-                        }
-                      >
-                        🗑️ Delete
-                      </button>
+                        <CarFront size={13} />
+                        <span>
+                          {customer.vehicleCount || 0}{" "}
+                          {customer.vehicleCount === 1 ? "Vehicle" : "Vehicles"}
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <div className="address-cell">
+                        <MapPin size={13} className="table-inline-icon" />
+                        <span>{customer.address}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="table-actions-cell">
+                        <button
+                          className="action-icon-btn edit"
+                          onClick={() => handleEdit(customer)}
+                          title="Edit Customer"
+                        >
+                          <Pencil size={15} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          className="action-icon-btn delete"
+                          onClick={() => handleDelete(customer._id)}
+                          title="Delete Customer"
+                        >
+                          <Trash2 size={15} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                )
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </main>

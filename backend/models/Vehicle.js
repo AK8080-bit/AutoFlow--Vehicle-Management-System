@@ -6,21 +6,43 @@ const vehicleSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      uppercase: true,
+      trim: true,
     },
 
     vehicleType: {
       type: String,
       required: true,
+      trim: true,
     },
 
     model: {
       type: String,
       required: true,
+      trim: true,
     },
 
     customerName: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    customerEmail: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    customerPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
     },
 
     registrationYear: {

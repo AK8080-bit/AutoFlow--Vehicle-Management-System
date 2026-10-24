@@ -1,10 +1,9 @@
 const express = require("express");
-
 const cors = require("cors");
-
 const dotenv = require("dotenv");
-
 const connectDB = require("./config/db");
+
+dotenv.config();
 
 // Customer Routes
 const customerRoutes = require("./routes/customerRoutes");
@@ -18,7 +17,8 @@ const serviceRoutes = require("./routes/serviceRoutes");
 // Admin Routes
 const adminRoutes = require("./routes/adminRoutes");
 
-dotenv.config();
+// User Email Authentication Routes
+const userAuthRoutes = require("./routes/userAuthRoutes");
 
 const app = express();
 
@@ -27,25 +27,20 @@ connectDB();
 
 // Middleware
 app.use(cors());
-
 app.use(express.json());
 
-// Customer Routes
+// Routes
 app.use("/api/customers", customerRoutes);
-
-// Vehicle Routes
 app.use("/api/vehicles", vehicleRoutes);
-
-// Service Routes
 app.use("/api/services", serviceRoutes);
-
-// Admin Routes
 app.use("/api/admin", adminRoutes);
+app.use("/api/user-auth", userAuthRoutes);
 
 // Test route
 app.get("/", (req, res) => {
   res.json({
     message: "Vehicle Service Management API is running",
+    resendConfigured: !!process.env.RESEND_API_KEY,
   });
 });
 
