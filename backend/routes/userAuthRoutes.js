@@ -1,20 +1,14 @@
 const express = require("express");
-const {
-  sendOtp,
-  verifyOtp,
-  getMyVerifiedData,
-} = require("../controllers/userAuthController");
-const verifyUserAuth = require("../middleware/userAuthMiddleware");
+const { getVehiclesByEmail } = require("../controllers/userAuthController");
 
 const router = express.Router();
 
-// Public: send OTP to customer email or for vehicle plate
-router.post("/send-otp", sendOtp);
+// Public: lookup customer vehicles and service history by email (Direct - No OTP)
+router.get("/by-email/:email", getVehiclesByEmail);
+router.get("/by-email", getVehiclesByEmail);
+router.post("/by-email", getVehiclesByEmail);
 
-// Public: verify OTP and receive authenticated JWT session token + data
-router.post("/verify-otp", verifyOtp);
-
-// Protected: access vehicle and repair data only if email is verified
-router.get("/my-data", verifyUserAuth, getMyVerifiedData);
+// Backward compatibility alias
+router.get("/my-data", getVehiclesByEmail);
 
 module.exports = router;

@@ -40,7 +40,6 @@ app.use("/api/user-auth", userAuthRoutes);
 app.get("/", (req, res) => {
   res.json({
     message: "Vehicle Service Management API is running",
-    resendConfigured: !!process.env.RESEND_API_KEY,
   });
 });
 
